@@ -17,6 +17,7 @@ docs/*.html
 
 # Assets
 assets/*.zip
+assets/*.rar
 
 # OS
 .DS_Store
