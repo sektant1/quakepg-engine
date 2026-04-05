@@ -53,7 +53,6 @@ HTML_OUTPUT            = html
 HTML_COLORSTYLE        = DARK
 DISABLE_INDEX          = NO
 FULL_SIDEBAR           = YES
-# HTML_EXTRA_STYLESHEET  = docs/doxygen-awesome-css/doxygen-awesome.css 
 GENERATE_LATEX         = YES
 GENERATE_MAN           = YES
 GENERATE_XML           = NO

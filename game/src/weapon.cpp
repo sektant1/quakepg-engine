@@ -78,7 +78,7 @@ void weapon_draw(const Weapon &w, const Camera &cam, const Shader &shader, f32 a
         f32 swing = sinf(t * 3.14159f);
         pos.z -= swing * 0.2f;  // thrust forward
         pos.y += swing * 0.2f;  // slight lift
-        pos.x -= swing * 0.2f;
+        pos.x -= swing * 0.3f;
         rot.x -= swing * 30.0f;  // pitch down (slash motion)
         rot.z += swing * 50.0f;  // pitch down (slash motion)
     }
