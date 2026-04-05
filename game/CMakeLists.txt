@@ -8,9 +8,9 @@ set(GAME_SOURCES
 add_executable(quakepg_game ${GAME_SOURCES})
 
 # Link against the engine - gets all public includes/libs transitively
-target_link_libraries(quakepg_game PRIVATE quakepg_engine)
+target_link_libraries(quakepg_game PRIVATE quakepg_engine ${GLFW_LIB})
 
-# Game's own headers
+# Game's own headers + GLFW for ImGui integration
 target_include_directories(quakepg_game
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )

@@ -544,12 +544,64 @@ Linear fog por vertice, esconde o draw distance curto.
 | `uModel` | mat4 | Matriz de transformacao do objeto |
 | `uView` | mat4 | Matriz da camera |
 | `uProjection` | mat4 | Matriz de projecao |
-| `uSnapResolution` | float | Grid de vertex snap (160.0 = sutil, 80.0 = forte) |
+| `uSnapResolution` | float | Grid de vertex snap (160.0 = sutil, 80.0 = forte, 0 = desligado) |
 | `uFogColor` | vec3 | Cor do fog (combinar com clear color) |
+| `uFogStart` | float | Distancia onde o fog comeca (default 5.0) |
+| `uFogEnd` | float | Distancia onde o fog e 100% (default 40.0) |
 | `uDitheringEnabled` | int | 0 = desligado, 1 = ligado |
 | `uTexture` | sampler2D | Textura no slot 0 |
 | `uUseTexture` | int | 0 = so vertex color, 1 = usa textura |
 | `uTintColor` | vec4 | Multiplicador de cor |
+
+---
+
+## Debug UI (Dear ImGui)
+
+Aperte **Tab** durante o jogo pra abrir o menu de debug. Tab de novo pra fechar e voltar ao jogo. O menu permite ajustar todos os parametros do renderer em tempo real.
+
+### Controles disponiveis no menu
+
+| Parametro | O que faz | Faixa | Dica |
+|-----------|-----------|-------|------|
+| **FOV** | Campo de visao da camera | 60-120 | 90 = estilo Quake, 60 = mais cinematico, 120 = fisheye |
+| **Speed** | Velocidade do player | 1-20 | 4 = normal, 8 = sprint |
+| **Sensitivity** | Sensibilidade do mouse | 0.05-0.5 | 0.15 = default |
+| **Snap Resolution** | Intensidade do vertex jitter | 0-320 | 0 = desligado (clean), 80 = PS1 forte, 160 = sutil, 320 = quase nada |
+| **Fog Color** | Cor do fog/nevoa | RGB | Combinar com Clear Color pra resultado natural |
+| **Fog Start** | Distancia onde o fog comeca | 0-50 | Menor = fog mais perto = mais claustrofobico |
+| **Fog End** | Distancia onde o fog e total | 1-100 | Menor = draw distance curto = mais misterioso |
+| **Clear Color** | Cor de fundo (ceu/void) | RGB | Deve combinar com Fog Color |
+| **Tint** | Multiplicador de cor global | RGBA | Vermelho = sangue, azul = frio, alpha = transparencia |
+| **Dithering** | Bayer dithering 4x4 | on/off | Liga pra look PS1 autentico, desliga pra clean |
+
+### Receitas de vibes
+
+**Dungeon escuro classico (default)**
+- Clear/Fog Color: `(0.02, 0.01, 0.05)` (roxo escuro)
+- Fog Start: `5`, Fog End: `40`
+- Snap: `160`, Dithering: on
+
+**Catacumba claustrofobica**
+- Clear/Fog Color: `(0.0, 0.0, 0.0)` (preto total)
+- Fog Start: `2`, Fog End: `15`
+- Snap: `80`, Dithering: on
+
+**Ruinas ao luar**
+- Clear/Fog Color: `(0.05, 0.07, 0.15)` (azul noturno)
+- Fog Start: `10`, Fog End: `60`
+- Snap: `0`, Dithering: off
+- Tint: `(0.8, 0.85, 1.0, 1.0)` (tom frio)
+
+**Inferno/lava**
+- Clear/Fog Color: `(0.15, 0.02, 0.0)` (vermelho escuro)
+- Fog Start: `3`, Fog End: `25`
+- Snap: `120`, Dithering: on
+- Tint: `(1.2, 0.7, 0.5, 1.0)` (quente)
+
+**Clean moderno (sem efeitos PSX)**
+- Snap: `0`, Dithering: off
+- Fog Start: `20`, Fog End: `80`
+- Tint: `(1, 1, 1, 1)`
 
 ---
 
@@ -890,9 +942,10 @@ while (!window_should_close(window)) {
 | Mudar altura das paredes | `dungeon_map_load()` → parametro `wall_height` |
 | Mudar cores do dungeon | `game/src/dungeon/dungeon_map.cpp` → `floor_color`, `wall_color`, etc. |
 | Mudar fog | `assets/shaders/psx.vert` → `fogStart`, `fogEnd` |
-| Mudar vertex jitter | `game/src/main.cpp` → `uSnapResolution` (menor = mais jitter) |
-| Mudar dithering | `game/src/main.cpp` → `uDitheringEnabled` (0 ou 1) |
-| Mudar cor do fog | `game/src/main.cpp` → `uFogColor` (deve combinar com clear color) |
+| Ajustar todos os efeitos PSX | Aperte **Tab** no jogo → menu Dear ImGui |
+| Mudar vertex jitter | Tab → Snap Resolution (0 = off, 80 = forte, 160 = sutil) |
+| Mudar dithering | Tab → Dithering checkbox |
+| Mudar fog | Tab → Fog Color, Fog Start, Fog End |
 | Adicionar nova tecla | `engine/include/engine/platform/input.h` + `engine/src/platform/input.cpp` |
 | Adicionar novo sistema na engine | Criar .h em `engine/include/engine/`, .cpp em `engine/src/`, add no CMake |
 | Adicionar nova logica de game | Criar em `game/include/game/` e `game/src/`, add no CMake |

@@ -9,6 +9,8 @@ uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
 uniform float uSnapResolution; // vertex snapping grid (e.g. 160.0)
+uniform float uFogStart;       // fog start distance
+uniform float uFogEnd;         // fog end distance
 
 out vec2 vTexCoord;
 out vec4 vColor;
@@ -36,7 +38,5 @@ void main() {
 
     // Per-vertex fog (linear distance fog)
     float dist = length(viewPos.xyz);
-    float fogStart = 5.0;
-    float fogEnd   = 40.0;
-    vFog = clamp((fogEnd - dist) / (fogEnd - fogStart), 0.0, 1.0);
+    vFog = clamp((uFogEnd - dist) / (uFogEnd - uFogStart), 0.0, 1.0);
 }
