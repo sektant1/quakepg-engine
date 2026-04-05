@@ -3,6 +3,7 @@
 set(GAME_SOURCES
     src/main.cpp
     src/dungeon/dungeon_map.cpp
+    src/weapon.cpp
 )
 
 add_executable(quakepg_game ${GAME_SOURCES})

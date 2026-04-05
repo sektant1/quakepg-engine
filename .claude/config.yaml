@@ -85,7 +85,7 @@ performance:
 
 psx_constraints:
   rendering:
-    resolution: "320x240 internal"
+    resolution: "640x480 internal"
     color_precision: "low (16-bit style)"
     texture_mapping: "affine"
     vertex_precision: "snapped/jittered"

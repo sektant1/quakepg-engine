@@ -10,6 +10,7 @@ struct WindowConfig {
     const char* title = "QuakePG";
     bool vsync       = true;
     bool fullscreen  = false;
+    bool maximized   = false;
 };
 
 struct Window;

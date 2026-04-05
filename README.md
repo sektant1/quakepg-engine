@@ -36,7 +36,7 @@ cd ..
 ./quakepg_game
 ```
 
-Controles: WASD mover, Mouse olhar, Shift sprint, ESC sair.
+Controles: WASD mover, Mouse olhar, Shift sprint, Tab debug UI, `` ` `` console, ESC sair.
 
 ---
 
@@ -47,7 +47,7 @@ quakepg/
 ├── engine/                     # Biblioteca estatica
 │   ├── include/engine/         # Headers PUBLICOS (API da engine)
 │   │   ├── engine.h            # Include tudo de uma vez
-│   │   ├── core/               # Tipos, math, log, assert
+│   │   ├── core/               # Tipos, math, log, assert, console, debug_ui, imgui_theme
 │   │   ├── platform/           # Window, input, timer
 │   │   ├── renderer/           # Shader, mesh, texture, camera, material
 │   │   └── physics/            # Colisao AABB
@@ -203,7 +203,7 @@ f32 dy = input_mouse_dy();
 if (input_mouse_pressed(MouseButton::Left)) // clicou
 
 // Teclas disponiveis:
-// W A S D Q E R F Space LeftShift LeftCtrl Escape Tab
+// W A S D Q E R F Space LeftShift LeftCtrl Escape Tab GraveAccent
 // Num1-Num5 Up Down Left Right
 ```
 
@@ -360,18 +360,18 @@ Vec3 right_dir = camera_right(cam);
 
 ### Renderer: renderer.h
 
-Gerencia o framebuffer de resolucao interna (320x240px pra emular a do PSX) e faz upscale para a janela.
+Gerencia o framebuffer de resolucao interna (640x480px padrao) e faz upscale para a janela.
 
 ```cpp
 RendererConfig cfg;
-cfg.internal_width = 320;   // resolucao interna PSX
-cfg.internal_height = 240;
+cfg.internal_width = 640;   // resolucao interna
+cfg.internal_height = 480;
 Renderer* r = renderer_create(cfg);
 
 renderer_set_clear_color(0.02f, 0.01f, 0.05f, 1.0f); // fundo escuro
 
 // Cada frame:
-renderer_begin_frame(r);   // bind FBO 320x240, limpa tela
+renderer_begin_frame(r);   // bind FBO interno, limpa tela
 // ... todos os seus draw calls aqui ...
 renderer_end_frame(r);     // unbind FBO
 
@@ -403,6 +403,75 @@ AABB player = aabb_from_center_size(cam.position, {0.6f, 1.6f, 0.6f});
 Vec3 velocity = move_dir * speed * dt;
 Vec3 new_pos = aabb_slide(player, velocity, walls.data(), walls.size());
 cam.position = new_pos;
+```
+
+### Core: console.h
+
+Console de debug estilo Quake com ImGui. Captura automaticamente os logs do `LOG_INFO/WARN/ERROR` e permite digitar comandos.
+
+```cpp
+#include <engine/core/console.h>
+using namespace qp;
+
+// Inicializar (uma vez)
+console_init();
+
+// Toggle com ` (grave accent / tilde)
+bool show_console = false;
+if (input_key_pressed(Key::GraveAccent)) {
+    show_console = !show_console;
+}
+
+// No bloco ImGui:
+console_draw(&show_console);
+
+// Push manual de mensagens
+console_push(ConsoleMsgLevel::Info, "Player spawned at %.1f %.1f", x, z);
+console_push(ConsoleMsgLevel::Warn, "Low FPS: %u", fps);
+console_push(ConsoleMsgLevel::Error, "Failed to load: %s", path);
+
+// Registrar comandos customizados
+void cmd_noclip(const char* args) { /* ... */ }
+console_register("noclip", cmd_noclip);
+```
+
+Comandos built-in: `help` (lista comandos), `clear` (limpa mensagens). Historico navegavel com setas cima/baixo.
+
+Cores das mensagens:
+- **Info**: cinza claro
+- **Warn**: amarelo
+- **Error**: vermelho
+- **Cmd** (input do usuario): azul claro
+
+### Core: debug_ui.h
+
+Janela de debug PSX com controles de rendering, camera, fog, etc. Extraida do main pra manter o game loop limpo.
+
+```cpp
+#include <engine/core/debug_ui.h>
+using namespace qp;
+
+DebugUIState dbg = {};
+dbg.renderer = renderer;
+dbg.camera   = &cam;
+// ... setar valores iniciais ...
+
+bool show_debug = false;
+// Toggle com Tab
+
+// No bloco ImGui:
+dbg.fb_w = fb_w;
+dbg.fb_h = fb_h;
+debug_ui_draw(dbg, &show_debug);
+```
+
+### Core: imgui_theme.h
+
+Tema visual customizado pro ImGui. Chamar apos `ImGui::CreateContext()`.
+
+```cpp
+#include <engine/core/imgui_theme.h>
+imgui_apply_theme(); // substitui ImGui::StyleColorsDark()
 ```
 
 ### Dear ImGui
@@ -444,7 +513,7 @@ ImGui_ImplGlfw_Shutdown();
 ImGui::DestroyContext();
 ```
 
-**Ordem no game loop**: ImGui deve renderizar DEPOIS do `renderer_end_frame()` e ANTES do `window_swap_buffers()`, pra desenhar na resolucao nativa da janela (nao na resolucao PSX 320x240).
+**Ordem no game loop**: ImGui deve renderizar DEPOIS do `renderer_end_frame()` e ANTES do `window_swap_buffers()`, pra desenhar na resolucao nativa da janela (nao na resolucao interna do FBO).
 
 **Input**: `ImGui_ImplGlfw_InitForOpenGL(window, true)` com `true` instala callbacks automaticamente. Se o ImGui estiver capturando input (`ImGui::GetIO().WantCaptureMouse`/`WantCaptureKeyboard`), nao processe input do jogo.
 

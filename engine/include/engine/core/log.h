@@ -47,14 +47,29 @@ enum class LogLevel
     Fatal
 };
 
-#define LOG_INFO(fmt, ...) \
-    fprintf(stdout, COLOR_INFO "[INFO] %s:%d: " fmt COLOR_RESET "\n", short_file(__FILE__), __LINE__, ##__VA_ARGS__)
+// Forward declaration for console integration (avoids circular include)
+namespace qp {
+enum class ConsoleMsgLevel : uint8_t;
+void console_push(ConsoleMsgLevel level, const char *fmt, ...);
+}
 
-#define LOG_WARN(fmt, ...) \
-    fprintf(stderr, COLOR_WARN "[WARN] %s:%d: " fmt COLOR_RESET "\n", short_file(__FILE__), __LINE__, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...)                                                                                      \
+    do {                                                                                                        \
+        fprintf(stdout, COLOR_INFO "[INFO] %s:%d: " fmt COLOR_RESET "\n", short_file(__FILE__), __LINE__, ##__VA_ARGS__); \
+        qp::console_push((qp::ConsoleMsgLevel)0, "[INFO] " fmt, ##__VA_ARGS__);                                \
+    } while (0)
 
-#define LOG_ERROR(fmt, ...) \
-    fprintf(stderr, COLOR_ERROR "[ERROR] %s:%d: " fmt COLOR_RESET "\n", short_file(__FILE__), __LINE__, ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...)                                                                                      \
+    do {                                                                                                        \
+        fprintf(stderr, COLOR_WARN "[WARN] %s:%d: " fmt COLOR_RESET "\n", short_file(__FILE__), __LINE__, ##__VA_ARGS__); \
+        qp::console_push((qp::ConsoleMsgLevel)1, "[WARN] " fmt, ##__VA_ARGS__);                                \
+    } while (0)
+
+#define LOG_ERROR(fmt, ...)                                                                                     \
+    do {                                                                                                        \
+        fprintf(stderr, COLOR_ERROR "[ERROR] %s:%d: " fmt COLOR_RESET "\n", short_file(__FILE__), __LINE__, ##__VA_ARGS__); \
+        qp::console_push((qp::ConsoleMsgLevel)2, "[ERROR] " fmt, ##__VA_ARGS__);                               \
+    } while (0)
 
 #define LOG_FATAL(fmt, ...) \
     do { \

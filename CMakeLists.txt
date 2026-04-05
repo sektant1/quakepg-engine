@@ -49,6 +49,9 @@ target_include_directories(imgui PUBLIC ${CMAKE_SOURCE_DIR}/vendor/imgui
                                         ${CMAKE_SOURCE_DIR}/vendor/imgui/backends)
 target_link_libraries(imgui PRIVATE ${GLFW_LIB} glad)
 
+# -- Third party: Assimp (system) --
+find_package(assimp REQUIRED)
+
 # -- Engine (static library) --
 add_subdirectory(engine)
 

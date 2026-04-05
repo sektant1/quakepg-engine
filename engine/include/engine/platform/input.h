@@ -12,6 +12,7 @@ enum class Key : u32 {
     Tab,
     Num1, Num2, Num3, Num4, Num5,
     Up, Down, Left, Right,
+    GraveAccent,
     Count
 };
 

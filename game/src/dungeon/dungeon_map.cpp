@@ -28,16 +28,43 @@ Vec3 dungeon_map_cell_center(const DungeonMap &map, i32 x, i32 z)
 // Helper: push a single small quad (2 triangles)
 static void push_small_quad(std::vector<Vertex> &verts,
                             std::vector<u32>    &idxs,
-                            Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3,
-                            Vec3 normal, Vec4 color,
-                            float u0, float v0, float u1, float v1)
+                            Vec3                 p0,
+                            Vec3                 p1,
+                            Vec3                 p2,
+                            Vec3                 p3,
+                            Vec3                 normal,
+                            Vec4                 color,
+                            float                u0,
+                            float                v0,
+                            float                u1,
+                            float                v1)
 {
     u32 base = (u32)verts.size();
 
-    verts.push_back({{p0.x,p0.y,p0.z}, {u0,v0}, {normal.x,normal.y,normal.z}, {color.x,color.y,color.z,color.w}});
-    verts.push_back({{p1.x,p1.y,p1.z}, {u1,v0}, {normal.x,normal.y,normal.z}, {color.x,color.y,color.z,color.w}});
-    verts.push_back({{p2.x,p2.y,p2.z}, {u1,v1}, {normal.x,normal.y,normal.z}, {color.x,color.y,color.z,color.w}});
-    verts.push_back({{p3.x,p3.y,p3.z}, {u0,v1}, {normal.x,normal.y,normal.z}, {color.x,color.y,color.z,color.w}});
+    verts.push_back({
+        {p0.x, p0.y, p0.z},
+        {u0, v0},
+        {normal.x, normal.y, normal.z},
+        {color.x, color.y, color.z, color.w}
+    });
+    verts.push_back({
+        {p1.x, p1.y, p1.z},
+        {u1, v0},
+        {normal.x, normal.y, normal.z},
+        {color.x, color.y, color.z, color.w}
+    });
+    verts.push_back({
+        {p2.x, p2.y, p2.z},
+        {u1, v1},
+        {normal.x, normal.y, normal.z},
+        {color.x, color.y, color.z, color.w}
+    });
+    verts.push_back({
+        {p3.x, p3.y, p3.z},
+        {u0, v1},
+        {normal.x, normal.y, normal.z},
+        {color.x, color.y, color.z, color.w}
+    });
 
     idxs.push_back(base + 0);
     idxs.push_back(base + 1);
@@ -56,9 +83,16 @@ static constexpr i32 QUAD_SUBDIVS = 1;
 // UVs span [u0..u1] x [v0..v1] and are split proportionally.
 static void push_quad(std::vector<Vertex> &verts,
                       std::vector<u32>    &idxs,
-                      Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3,
-                      Vec3 normal, Vec4 color,
-                      float u0, float v0, float u1, float v1)
+                      Vec3                 p0,
+                      Vec3                 p1,
+                      Vec3                 p2,
+                      Vec3                 p3,
+                      Vec3                 normal,
+                      Vec4                 color,
+                      float                u0,
+                      float                v0,
+                      float                u1,
+                      float                v1)
 {
     const i32 N = QUAD_SUBDIVS;
 
@@ -87,8 +121,7 @@ static void push_quad(std::vector<Vertex> &verts,
             float su0 = u0 + (u1 - u0) * t0u;
             float su1 = u0 + (u1 - u0) * t1u;
 
-            push_small_quad(verts, idxs, sp0, sp1, sp2, sp3,
-                            normal, color, su0, sv0, su1, sv1);
+            push_small_quad(verts, idxs, sp0, sp1, sp2, sp3, normal, color, su0, sv0, su1, sv1);
         }
     }
 }
@@ -159,31 +192,63 @@ void dungeon_map_load(DungeonMap &map, const char **rows, i32 row_count, float c
                 // Check each neighbor - if open, emit a wall face
                 // +X face (neighbor at x+1)
                 if (!dungeon_map_is_wall(map, x + 1, z)) {
-                    push_quad(wall_verts, wall_idxs,
-                              {wx+cs, 0, wz}, {wx+cs, 0, wz+cs},
-                              {wx+cs, wh, wz+cs}, {wx+cs, wh, wz},
-                              {1,0,0}, wall_color, 0, 0, wall_u, wall_v);
+                    push_quad(wall_verts,
+                              wall_idxs,
+                              {wx + cs, 0, wz},
+                              {wx + cs, 0, wz + cs},
+                              {wx + cs, wh, wz + cs},
+                              {wx + cs, wh, wz},
+                              {1, 0, 0},
+                              wall_color,
+                              0,
+                              0,
+                              wall_u,
+                              wall_v);
                 }
                 // -X face
                 if (!dungeon_map_is_wall(map, x - 1, z)) {
-                    push_quad(wall_verts, wall_idxs,
-                              {wx, 0, wz+cs}, {wx, 0, wz},
-                              {wx, wh, wz}, {wx, wh, wz+cs},
-                              {-1,0,0}, wall_color_dk, 0, 0, wall_u, wall_v);
+                    push_quad(wall_verts,
+                              wall_idxs,
+                              {wx, 0, wz + cs},
+                              {wx, 0, wz},
+                              {wx, wh, wz},
+                              {wx, wh, wz + cs},
+                              {-1, 0, 0},
+                              wall_color_dk,
+                              0,
+                              0,
+                              wall_u,
+                              wall_v);
                 }
                 // +Z face
                 if (!dungeon_map_is_wall(map, x, z + 1)) {
-                    push_quad(wall_verts, wall_idxs,
-                              {wx+cs, 0, wz+cs}, {wx, 0, wz+cs},
-                              {wx, wh, wz+cs}, {wx+cs, wh, wz+cs},
-                              {0,0,1}, wall_color, 0, 0, wall_u, wall_v);
+                    push_quad(wall_verts,
+                              wall_idxs,
+                              {wx + cs, 0, wz + cs},
+                              {wx, 0, wz + cs},
+                              {wx, wh, wz + cs},
+                              {wx + cs, wh, wz + cs},
+                              {0, 0, 1},
+                              wall_color,
+                              0,
+                              0,
+                              wall_u,
+                              wall_v);
                 }
                 // -Z face
                 if (!dungeon_map_is_wall(map, x, z - 1)) {
-                    push_quad(wall_verts, wall_idxs,
-                              {wx, 0, wz}, {wx+cs, 0, wz},
-                              {wx+cs, wh, wz}, {wx, wh, wz},
-                              {0,0,-1}, wall_color_dk, 0, 0, wall_u, wall_v);
+                    push_quad(wall_verts,
+                              wall_idxs,
+                              {wx, 0, wz},
+                              {wx + cs, 0, wz},
+                              {wx + cs, wh, wz},
+                              {wx, wh, wz},
+                              {0, 0, -1},
+                              wall_color_dk,
+                              0,
+                              0,
+                              wall_u,
+                              wall_v);
                 }
 
             } else {
@@ -200,16 +265,32 @@ void dungeon_map_load(DungeonMap &map, const char **rows, i32 row_count, float c
                 float floor_u = cs;  // tile texture proportionally
                 float floor_v = cs;
 
-                push_quad(floor_verts, floor_idxs,
-                          {wx, 0, wz+cs}, {wx+cs, 0, wz+cs},
-                          {wx+cs, 0, wz}, {wx, 0, wz},
-                          {0,1,0}, fc, 0, 0, floor_u, floor_v);
+                push_quad(floor_verts,
+                          floor_idxs,
+                          {wx, 0, wz + cs},
+                          {wx + cs, 0, wz + cs},
+                          {wx + cs, 0, wz},
+                          {wx, 0, wz},
+                          {0, 1, 0},
+                          fc,
+                          0,
+                          0,
+                          floor_u,
+                          floor_v);
 
                 // Ceiling (y=wh, normal down)
-                push_quad(ceil_verts, ceil_idxs,
-                          {wx, wh, wz}, {wx+cs, wh, wz},
-                          {wx+cs, wh, wz+cs}, {wx, wh, wz+cs},
-                          {0,-1,0}, ceil_color, 0, 0, floor_u, floor_v);
+                push_quad(ceil_verts,
+                          ceil_idxs,
+                          {wx, wh, wz},
+                          {wx + cs, wh, wz},
+                          {wx + cs, wh, wz + cs},
+                          {wx, wh, wz + cs},
+                          {0, -1, 0},
+                          ceil_color,
+                          0,
+                          0,
+                          floor_u,
+                          floor_v);
             }
         }
     }

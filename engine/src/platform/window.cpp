@@ -37,6 +37,7 @@ Window *window_create(const WindowConfig &config)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    glfwWindowHint(GLFW_MAXIMIZED, config.maximized ? GLFW_TRUE : GLFW_FALSE);
 
     GLFWwindow *handle = glfwCreateWindow(config.width, config.height, config.title, nullptr, nullptr);
 
