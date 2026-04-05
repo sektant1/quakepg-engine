@@ -22,7 +22,7 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/vendor/glfw/CMakeLists.txt)
       OFF
       CACHE BOOL "" FORCE)
   set(GLFW_BUILD_WAYLAND
-      ON
+      OFF
       CACHE BOOL "" FORCE)
   set(GLFW_BUILD_X11
       ON
@@ -34,6 +34,20 @@ else()
   find_package(glfw3 3.3 REQUIRED)
   set(GLFW_LIB glfw)
 endif()
+
+# -- Third party: Dear ImGui (GLFW + OpenGL3 backend) --
+add_library(
+  imgui STATIC
+  vendor/imgui/imgui.cpp
+  vendor/imgui/imgui_demo.cpp
+  vendor/imgui/imgui_draw.cpp
+  vendor/imgui/imgui_tables.cpp
+  vendor/imgui/imgui_widgets.cpp
+  vendor/imgui/backends/imgui_impl_glfw.cpp
+  vendor/imgui/backends/imgui_impl_opengl3.cpp)
+target_include_directories(imgui PUBLIC ${CMAKE_SOURCE_DIR}/vendor/imgui
+                                        ${CMAKE_SOURCE_DIR}/vendor/imgui/backends)
+target_link_libraries(imgui PRIVATE ${GLFW_LIB} glad)
 
 # -- Engine (static library) --
 add_subdirectory(engine)

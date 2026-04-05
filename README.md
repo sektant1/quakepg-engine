@@ -12,6 +12,17 @@ O client nunca inclui `<glad/glad.h>` ou `<GLFW/glfw3.h>` diretamente. Toda inte
 
 ---
 
+## Dependencias de sistema
+
+```bash
+# Ubuntu/Debian - pacotes necessarios pra compilar
+sudo apt-get install build-essential cmake libx11-dev libxrandr-dev libxcursor-dev libxinerama-dev libxi-dev
+```
+
+GLFW e Dear ImGui ja estao em `vendor/` (bundled). Nao precisa instalar.
+
+---
+
 ## Compilar e rodar
 
 ```bash
@@ -60,7 +71,8 @@ quakepg/
 │
 └── vendor/                     # Dependencias
     ├── glad/                   # OpenGL loader
-    ├── glfw/                   # Janela/input (submodule ou system)
+    ├── glfw/                   # Janela/input (bundled ou system)
+    ├── imgui/                  # Dear ImGui (debug UI, editor tools)
     └── stb_image.h             # Carregamento de imagens
 ```
 
@@ -78,7 +90,7 @@ quakepg/
 ├─────────────────────────────────────────┤
 │     Core (types, math, log, assert)     │  <-- fundacao
 ├─────────────────────────────────────────┤
-│     Vendor (glad, GLFW, stb_image)      │  <-- libs externas
+│  Vendor (glad, GLFW, Dear ImGui, stb)   │  <-- libs externas
 └─────────────────────────────────────────┘
 ```
 
@@ -393,6 +405,49 @@ Vec3 new_pos = aabb_slide(player, velocity, walls.data(), walls.size());
 cam.position = new_pos;
 ```
 
+### Dear ImGui
+
+UI imediata pra debug, editor e ferramentas. Backend GLFW + OpenGL3 ja configurado.
+
+```cpp
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
+// Init (depois de criar janela e contexto GL)
+ImGui::CreateContext();
+ImGui_ImplGlfw_InitForOpenGL(window, true);
+ImGui_ImplOpenGL3_Init("#version 330");
+
+// No game loop, DEPOIS do renderer_end_frame (pra desenhar por cima):
+ImGui_ImplOpenGL3_NewFrame();
+ImGui_ImplGlfw_NewFrame();
+ImGui::NewFrame();
+
+// Suas janelas de debug aqui
+ImGui::Begin("Debug");
+ImGui::Text("FPS: %u", timer_fps());
+ImGui::SliderFloat("Snap Resolution", &snap_res, 40.0f, 320.0f);
+ImGui::SliderFloat("FOV", &cam.fov, 60.0f, 120.0f);
+ImGui::ColorEdit3("Fog Color", fog_color);
+ImGui::Checkbox("Dithering", &dithering_enabled);
+ImGui::End();
+
+// ImGui::ShowDemoWindow(); // janela demo com todos os widgets
+
+ImGui::Render();
+ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+// Cleanup (no shutdown)
+ImGui_ImplOpenGL3_Shutdown();
+ImGui_ImplGlfw_Shutdown();
+ImGui::DestroyContext();
+```
+
+**Ordem no game loop**: ImGui deve renderizar DEPOIS do `renderer_end_frame()` e ANTES do `window_swap_buffers()`, pra desenhar na resolucao nativa da janela (nao na resolucao PSX 320x240).
+
+**Input**: `ImGui_ImplGlfw_InitForOpenGL(window, true)` com `true` instala callbacks automaticamente. Se o ImGui estiver capturando input (`ImGui::GetIO().WantCaptureMouse`/`WantCaptureKeyboard`), nao processe input do jogo.
+
 ---
 
 ## Dungeon Maps
@@ -648,9 +703,10 @@ while (!window_should_close(window)) {
 - Sons de passos, impacto de arma, ambiente de dungeon
 
 ### Editor
-- Integrar Dear ImGui
+- ~~Integrar Dear ImGui~~ (feito - `vendor/imgui/`, backend GLFW+OpenGL3)
 - Visualizar/editar mapas
 - Ajustar parametros PSX em tempo real
+- Inspector de entidades e componentes
 
 ---
 
@@ -673,6 +729,7 @@ while (!window_should_close(window)) {
 | Adicionar nova tecla | `engine/include/engine/platform/input.h` + `engine/src/platform/input.cpp` |
 | Adicionar novo sistema na engine | Criar .h em `engine/include/engine/`, .cpp em `engine/src/`, add no CMake |
 | Adicionar nova logica de game | Criar em `game/include/game/` e `game/src/`, add no CMake |
+| Adicionar janela de debug ImGui | `game/src/main.cpp` → entre `renderer_end_frame` e `window_swap_buffers` |
 
 ---
 

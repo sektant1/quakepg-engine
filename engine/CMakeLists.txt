@@ -20,7 +20,7 @@ target_include_directories(quakepg_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc
 # Internal dependencies (not exposed to consumers)
 target_link_libraries(
   quakepg_engine
-  PUBLIC glad
+  PUBLIC glad imgui
   PRIVATE ${GLFW_LIB} ${CMAKE_DL_LIBS} m)
 
 # Internal include paths (glad, stb_image, glfw)
