@@ -1,0 +1,113 @@
+project:
+  name: quakepg
+  description: PSX-style retro fantasy dungeon crawler FPS built from scratch for learning
+
+context:
+  - Solo-developed learning project
+  - Inspired by Dark and Darker (combat, items) and Bloodthief (visual style)
+  - Architecture influenced by Game Engine Architecture (Jason Gregory)
+
+architecture:
+  goals:
+    - Clear separation between engine and game
+    - Subsystem-based design
+    - Data-oriented where possible
+    - Minimal abstraction
+    - Iterative development (avoid overengineering)
+
+  structure:
+    - engine/: core systems and runtime
+    - game/: gameplay logic and rules
+    - editor/: tools and content creation
+    - shared/: common data structures
+
+  subsystems:
+    core:
+      responsibilities: [memory, logging, platform]
+      constraints: [low-level, minimal dependencies]
+
+    rendering:
+      style: PSX-like
+      constraints:
+        - low resolution
+        - affine texture mapping
+        - vertex snapping
+        - low precision math
+
+    physics:
+      type: simple AABB-based
+      goal: fast, deterministic, minimal allocations
+
+    input: {}
+    audio: {}
+    resources: {}
+    ecs:
+      type: simple / data-oriented
+    scripting:
+      optional: true
+
+runtime:
+  main_loop:
+    order:
+      - input
+      - simulation
+      - physics
+      - rendering
+
+  rules:
+    - Engine must not depend on game layer
+    - Game uses engine as a library
+    - Avoid tight coupling between systems
+
+performance:
+  targets:
+    frame_time: "16ms (60 FPS target)"
+    cpu: "low-end CPU friendly"
+
+  memory:
+    budget:
+      ram: "512MB max"
+      vram: "256MB max"
+
+    rules:
+      - No dynamic allocations in the main loop
+      - Avoid heap allocations in hot paths
+      - Prefer stack or arena allocators
+      - Use memory pools for entities
+      - Minimize cache misses (data-oriented design)
+      - Avoid std::vector growth during runtime
+      - Preallocate where possible
+
+    layout:
+      - Prefer contiguous memory (arrays over pointers)
+      - Favor SoA over AoS when beneficial
+      - Avoid pointer chasing
+
+psx_constraints:
+  rendering:
+    resolution: "320x240 internal"
+    color_precision: "low (16-bit style)"
+    texture_mapping: "affine"
+    vertex_precision: "snapped/jittered"
+
+design_principles:
+  - Separation of concerns
+  - Data-oriented design
+  - Cache-friendly thinking
+  - Minimal abstraction
+  - Build only what is needed now
+
+roadmap:
+  - step1: window + input + render triangle
+  - step2: basic renderer (PSX-style)
+  - step3: ECS or object system
+  - step4: dungeon gameplay loop
+  - step5: editor/tools
+
+instructions:
+  - Always prioritize simplicity over scalability
+  - Avoid overengineering
+  - Prefer explicit and readable code
+  - Systems must be independent and composable
+  - All code should respect memory and performance constraints
+  - Favor iterative improvements instead of large upfront systems
