@@ -9,6 +9,7 @@ uniform int  uUseTexture;
 uniform vec4 uTintColor;
 uniform vec3 uFogColor;
 uniform int  uDitheringEnabled;
+uniform float uColorDepth;       // color levels per channel (31.0 = PS1, 255.0 = full)
 
 out vec4 FragColor;
 
@@ -42,14 +43,15 @@ void main() {
     // Discard fully transparent fragments
     if (color.a < 0.01) discard;
 
-    // COLOR DEPTH REDUCTION: 15-bit color (5 bits per channel = 32 levels)
-    color.rgb = floor(color.rgb * 31.0 + 0.5) / 31.0;
+    // COLOR DEPTH REDUCTION: quantize to uColorDepth levels per channel
+    float depth = max(uColorDepth, 1.0);
+    color.rgb = floor(color.rgb * depth + 0.5) / depth;
 
     // DITHERING
     if (uDitheringEnabled != 0) {
-        float d = dither4x4(gl_FragCoord.xy) / 31.0;
-        color.rgb += d - (0.5 / 31.0);
-        color.rgb = floor(color.rgb * 31.0 + 0.5) / 31.0;
+        float d = dither4x4(gl_FragCoord.xy) / depth;
+        color.rgb += d - (0.5 / depth);
+        color.rgb = floor(color.rgb * depth + 0.5) / depth;
     }
 
     // FOG

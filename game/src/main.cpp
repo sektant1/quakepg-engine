@@ -80,7 +80,17 @@ int main()
     float fog_start         = 5.0f;
     float fog_end           = 40.0f;
     bool  dithering_enabled = true;
+    float color_depth       = 31.0f;
     float tint_color[4]     = {1.0f, 1.0f, 1.0f, 1.0f};
+
+    // -- Player tweakables --
+    float base_speed    = 4.0f;
+    float sprint_mult   = 2.0f;
+
+    // -- Renderer tweakables --
+    int internal_w = 320;
+    int internal_h = 240;
+    int resolution_preset = 0;  // 0=320x240, 1=512x384, 2=640x480, 3=native
 
     // -- Renderer --
     RendererConfig ren_cfg;
@@ -160,7 +170,7 @@ int main()
             right -= 1.0f;
         }
 
-        cam.speed = input_key_down(Key::LeftShift) ? 8.0f : 4.0f;
+        cam.speed = input_key_down(Key::LeftShift) ? base_speed * sprint_mult : base_speed;
 
         // Calculate desired velocity
         Vec3 fwd_dir   = camera_forward(cam);
@@ -182,7 +192,9 @@ int main()
         // -- Render --
         i32 fb_w, fb_h;
         window_get_framebuffer_size(window, &fb_w, &fb_h);
-        f32 aspect = (f32)ren_cfg.internal_width / (f32)ren_cfg.internal_height;
+        i32 ren_w, ren_h;
+        renderer_get_internal_size(renderer, &ren_w, &ren_h);
+        f32 aspect = (f32)ren_w / (f32)ren_h;
 
         Mat4 view  = camera_view_matrix(cam);
         Mat4 proj  = camera_projection_matrix(cam, aspect);
@@ -203,6 +215,7 @@ int main()
         shader_set_int(psx_shader, "uUseTexture", 1);
         shader_set_float(psx_shader, "uFogStart", fog_start);
         shader_set_float(psx_shader, "uFogEnd", fog_end);
+        shader_set_float(psx_shader, "uColorDepth", color_depth);
 
         texture_bind(white_tex, 0);
 
@@ -232,34 +245,70 @@ int main()
         if (show_debug) {
             ImGui::Begin("PSX Debug", &show_debug);
 
+            // -- Performance --
             ImGui::SeparatorText("Performance");
             ImGui::Text("FPS: %u", timer_fps());
             ImGui::Text("Frame: %.2f ms", (float)timer_delta() * 1000.0f);
             ImGui::Text("Pos: %.1f, %.1f, %.1f", cam.position.x, cam.position.y, cam.position.z);
 
+            // -- Resolution --
+            ImGui::SeparatorText("Resolution");
+            const char* presets[] = {"320x240 (PS1)", "512x384", "640x480", "Native"};
+            if (ImGui::Combo("Preset", &resolution_preset, presets, 4)) {
+                switch (resolution_preset) {
+                    case 0: internal_w = 320; internal_h = 240; break;
+                    case 1: internal_w = 512; internal_h = 384; break;
+                    case 2: internal_w = 640; internal_h = 480; break;
+                    case 3: internal_w = fb_w; internal_h = fb_h; break;
+                }
+                renderer_resize(renderer, internal_w, internal_h);
+            }
+            ImGui::SliderInt("Width", &internal_w, 160, 1920);
+            ImGui::SliderInt("Height", &internal_h, 120, 1080);
+            if (ImGui::Button("Apply Resolution")) {
+                renderer_resize(renderer, internal_w, internal_h);
+            }
+            i32 cur_w, cur_h;
+            renderer_get_internal_size(renderer, &cur_w, &cur_h);
+            ImGui::Text("Current: %dx%d", cur_w, cur_h);
+
+            // -- Camera --
             ImGui::SeparatorText("Camera");
             ImGui::SliderFloat("FOV", &cam.fov, 60.0f, 120.0f);
-            ImGui::SliderFloat("Speed", &cam.speed, 1.0f, 20.0f);
+            ImGui::SliderFloat("Speed", &base_speed, 1.0f, 20.0f);
+            ImGui::SliderFloat("Sprint Multiplier", &sprint_mult, 1.0f, 5.0f);
             ImGui::SliderFloat("Sensitivity", &cam.sensitivity, 0.05f, 0.5f);
 
+            // -- Vertex Snapping --
             ImGui::SeparatorText("Vertex Snapping");
             ImGui::SliderFloat("Snap Resolution", &snap_resolution, 0.0f, 320.0f, "%.0f");
             ImGui::TextWrapped("0 = off, 80 = strong jitter, 160 = subtle, 320 = barely visible");
 
+            // -- Fog --
             ImGui::SeparatorText("Fog");
             ImGui::ColorEdit3("Fog Color", fog_color);
             ImGui::SliderFloat("Fog Start", &fog_start, 0.0f, 50.0f);
             ImGui::SliderFloat("Fog End", &fog_end, 1.0f, 100.0f);
 
-            ImGui::SeparatorText("Color");
+            // -- Color & Post --
+            ImGui::SeparatorText("Color & Post-Processing");
             ImGui::ColorEdit3("Clear Color", clear_color);
             ImGui::ColorEdit4("Tint", tint_color);
             ImGui::Checkbox("Dithering", &dithering_enabled);
+            ImGui::SliderFloat("Color Depth", &color_depth, 3.0f, 255.0f, "%.0f");
+            ImGui::TextWrapped("31 = PS1 (15-bit), 63 = 18-bit, 255 = full 24-bit");
 
+            // -- Help --
             ImGui::SeparatorText("Controls");
             ImGui::TextWrapped("Tab = toggle this menu | WASD = move | Mouse = look | Shift = sprint | Esc = quit");
 
             ImGui::End();
+        }
+
+        // Re-lock cursor if debug window was closed via X button
+        if (!show_debug && !cursor_locked) {
+            cursor_locked = true;
+            input_set_cursor_locked(true);
         }
 
         ImGui::Render();

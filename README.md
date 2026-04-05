@@ -549,6 +549,7 @@ Linear fog por vertice, esconde o draw distance curto.
 | `uFogStart` | float | Distancia onde o fog comeca (default 5.0) |
 | `uFogEnd` | float | Distancia onde o fog e 100% (default 40.0) |
 | `uDitheringEnabled` | int | 0 = desligado, 1 = ligado |
+| `uColorDepth` | float | Niveis de cor por canal (31.0 = PS1, 255.0 = full) |
 | `uTexture` | sampler2D | Textura no slot 0 |
 | `uUseTexture` | int | 0 = so vertex color, 1 = usa textura |
 | `uTintColor` | vec4 | Multiplicador de cor |
@@ -557,49 +558,89 @@ Linear fog por vertice, esconde o draw distance curto.
 
 ## Debug UI (Dear ImGui)
 
-Aperte **Tab** durante o jogo pra abrir o menu de debug. Tab de novo pra fechar e voltar ao jogo. O menu permite ajustar todos os parametros do renderer em tempo real.
+Aperte **Tab** durante o jogo pra abrir o menu de debug. Tab de novo pra fechar e voltar ao jogo. O mouse e liberado quando o menu esta aberto. Se fechar pelo X do ImGui, o cursor volta automaticamente pro jogo.
 
 ### Controles disponiveis no menu
 
+#### Performance
+| Parametro | O que mostra |
+|-----------|-------------|
+| **FPS** | Frames por segundo |
+| **Frame** | Tempo do frame em ms |
+| **Pos** | Posicao do player no mundo |
+
+#### Resolucao
 | Parametro | O que faz | Faixa | Dica |
 |-----------|-----------|-------|------|
-| **FOV** | Campo de visao da camera | 60-120 | 90 = estilo Quake, 60 = mais cinematico, 120 = fisheye |
-| **Speed** | Velocidade do player | 1-20 | 4 = normal, 8 = sprint |
+| **Preset** | Resolucao interna pre-definida | 320x240, 512x384, 640x480, Native | PS1 = 320x240 |
+| **Width/Height** | Resolucao interna customizada | 160-1920 / 120-1080 | Clique "Apply Resolution" pra aplicar |
+| **Apply Resolution** | Recria o framebuffer com o novo tamanho | botao | Menor = mais pixelado, maior = mais definido |
+
+A resolucao interna e o tamanho do FBO onde a cena e renderizada. Depois e feito upscale pra janela com GL_NEAREST (pixelado). Mudar a resolucao nao muda o tamanho da janela, so a qualidade interna.
+
+#### Camera
+| Parametro | O que faz | Faixa | Dica |
+|-----------|-----------|-------|------|
+| **FOV** | Campo de visao | 60-120 | 90 = Quake, 60 = cinematico, 120 = fisheye |
+| **Speed** | Velocidade base do player | 1-20 | 4 = default |
+| **Sprint Multiplier** | Multiplicador quando segura Shift | 1-5 | 2 = default (velocidade = speed * mult) |
 | **Sensitivity** | Sensibilidade do mouse | 0.05-0.5 | 0.15 = default |
-| **Snap Resolution** | Intensidade do vertex jitter | 0-320 | 0 = desligado (clean), 80 = PS1 forte, 160 = sutil, 320 = quase nada |
-| **Fog Color** | Cor do fog/nevoa | RGB | Combinar com Clear Color pra resultado natural |
-| **Fog Start** | Distancia onde o fog comeca | 0-50 | Menor = fog mais perto = mais claustrofobico |
-| **Fog End** | Distancia onde o fog e total | 1-100 | Menor = draw distance curto = mais misterioso |
-| **Clear Color** | Cor de fundo (ceu/void) | RGB | Deve combinar com Fog Color |
-| **Tint** | Multiplicador de cor global | RGBA | Vermelho = sangue, azul = frio, alpha = transparencia |
-| **Dithering** | Bayer dithering 4x4 | on/off | Liga pra look PS1 autentico, desliga pra clean |
+
+#### Vertex Snapping
+| Parametro | O que faz | Faixa | Dica |
+|-----------|-----------|-------|------|
+| **Snap Resolution** | Grid de snap dos vertices | 0-320 | 0 = off, 80 = PS1 forte, 160 = sutil, 320 = quase nada |
+
+Simula a precisao fixa do PS1 GTE. Vertices "tremem" ao se mover. Menor = mais jitter.
+
+#### Fog
+| Parametro | O que faz | Faixa | Dica |
+|-----------|-----------|-------|------|
+| **Fog Color** | Cor da nevoa | RGB | Combinar com Clear Color |
+| **Fog Start** | Distancia onde o fog comeca | 0-50 | Menor = mais claustrofobico |
+| **Fog End** | Distancia onde o fog e 100% | 1-100 | Menor = draw distance curto |
+
+#### Color & Post-Processing
+| Parametro | O que faz | Faixa | Dica |
+|-----------|-----------|-------|------|
+| **Clear Color** | Cor de fundo | RGB | Deve combinar com Fog Color |
+| **Tint** | Multiplicador de cor global | RGBA | Vermelho = sangue, azul = frio |
+| **Dithering** | Bayer dithering 4x4 | on/off | PS1 autentico = on |
+| **Color Depth** | Niveis de cor por canal | 3-255 | 31 = PS1 (15-bit), 63 = 18-bit, 255 = full 24-bit |
+
+Color Depth controla quantos niveis de cor cada canal (R/G/B) pode ter. O PS1 tinha 31 niveis (5 bits). Valores menores = mais posterizacao/banding. Combinado com dithering, valores baixos dao o look classico.
 
 ### Receitas de vibes
 
 **Dungeon escuro classico (default)**
+- Resolucao: 320x240
 - Clear/Fog Color: `(0.02, 0.01, 0.05)` (roxo escuro)
 - Fog Start: `5`, Fog End: `40`
-- Snap: `160`, Dithering: on
+- Snap: `160`, Dithering: on, Color Depth: `31`
 
 **Catacumba claustrofobica**
+- Resolucao: 320x240
 - Clear/Fog Color: `(0.0, 0.0, 0.0)` (preto total)
 - Fog Start: `2`, Fog End: `15`
-- Snap: `80`, Dithering: on
+- Snap: `80`, Dithering: on, Color Depth: `15`
 
 **Ruinas ao luar**
+- Resolucao: 512x384
 - Clear/Fog Color: `(0.05, 0.07, 0.15)` (azul noturno)
 - Fog Start: `10`, Fog End: `60`
-- Snap: `0`, Dithering: off
+- Snap: `0`, Dithering: off, Color Depth: `63`
 - Tint: `(0.8, 0.85, 1.0, 1.0)` (tom frio)
 
 **Inferno/lava**
+- Resolucao: 320x240
 - Clear/Fog Color: `(0.15, 0.02, 0.0)` (vermelho escuro)
 - Fog Start: `3`, Fog End: `25`
-- Snap: `120`, Dithering: on
+- Snap: `120`, Dithering: on, Color Depth: `31`
 - Tint: `(1.2, 0.7, 0.5, 1.0)` (quente)
 
 **Clean moderno (sem efeitos PSX)**
-- Snap: `0`, Dithering: off
+- Resolucao: 640x480 ou Native
+- Snap: `0`, Dithering: off, Color Depth: `255`
 - Fog Start: `20`, Fog End: `80`
 - Tint: `(1, 1, 1, 1)`
 

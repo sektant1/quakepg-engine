@@ -116,6 +116,30 @@ void renderer_present(Renderer* r, i32 window_width, i32 window_height) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void renderer_resize(Renderer* r, i32 width, i32 height) {
+    if (width == r->internal_w && height == r->internal_h) return;
+    if (width < 1 || height < 1) return;
+
+    r->internal_w = width;
+    r->internal_h = height;
+
+    // Resize FBO color texture
+    glBindTexture(GL_TEXTURE_2D, r->fbo_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height,
+                 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+
+    // Resize depth/stencil renderbuffer
+    glBindRenderbuffer(GL_RENDERBUFFER, r->rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+
+    LOG_INFO("Renderer resized: %dx%d", width, height);
+}
+
+void renderer_get_internal_size(Renderer* r, i32* width, i32* height) {
+    *width  = r->internal_w;
+    *height = r->internal_h;
+}
+
 void renderer_set_clear_color(f32 r, f32 g, f32 b, f32 a) {
     glClearColor(r, g, b, a);
 }

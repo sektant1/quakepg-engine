@@ -18,6 +18,8 @@ void renderer_begin_frame(Renderer* r);
 void renderer_end_frame(Renderer* r);
 void renderer_present(Renderer* r, i32 window_width, i32 window_height);
 
+void renderer_resize(Renderer* r, i32 width, i32 height);
+void renderer_get_internal_size(Renderer* r, i32* width, i32* height);
 void renderer_set_clear_color(f32 r, f32 g, f32 b, f32 a);
 void renderer_set_viewport(i32 x, i32 y, i32 w, i32 h);
 
