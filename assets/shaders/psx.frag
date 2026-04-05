@@ -1,6 +1,6 @@
 #version 330 core
 
-noperspective in vec2 vTexCoord;
+in vec2 vTexCoord;
 in vec4 vColor;
 in float vFog;
 

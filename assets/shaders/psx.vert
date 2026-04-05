@@ -10,8 +10,7 @@ uniform mat4 uView;
 uniform mat4 uProjection;
 uniform float uSnapResolution; // vertex snapping grid (e.g. 160.0)
 
-// Affine texture mapping: noperspective disables perspective correction
-noperspective out vec2 vTexCoord;
+out vec2 vTexCoord;
 out vec4 vColor;
 out float vFog;
 
