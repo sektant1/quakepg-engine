@@ -1,84 +1,193 @@
 #include <engine/engine.h>
+#include <game/dungeon/dungeon_map.h>
 
-int main()
-{
-    // Create window
-    qp::WindowConfig win_cfg;
-    win_cfg.width  = 960;
-    win_cfg.height = 720;
-    win_cfg.title  = "QuakePG - PSX Dungeon Crawler";
-    win_cfg.vsync  = true;
+#include "engine/core/log.h"
 
-    qp::Window *window = qp::window_create(win_cfg);
-    if (!window) {
-        return 1;
+using namespace qp;
+
+// ============================================================================
+// Dungeon layout
+// ============================================================================
+// # = wall, . = open space, P = player start
+// Each cell is CELL_SIZE x CELL_SIZE world units
+
+// clang-format off
+static const char* DUNGEON_MAP[] = {
+    "################",
+    "#......P.......#",
+    "#..............#",
+    "#..####..####..#",
+    "#..#........#..#",
+    "#..#........#..#",
+    "#..#........#..#",
+    "#..####..####..#",
+    "#..............#",
+    "#.....####.....#",
+    "#.....#..#.....#",
+    "#.....#..#.....#",
+    "#.....####.....#",
+    "#..............#",
+    "#..##......##..#",
+    "#..##......##..#",
+    "#..............#",
+    "#..............#",
+    "################",
+};
+// clang-format on
+
+static constexpr i32 MAP_ROWS = sizeof(DUNGEON_MAP) / sizeof(DUNGEON_MAP[0]);
+
+int main() {
+  // -- Window --
+  WindowConfig win_cfg;
+  win_cfg.width = 960;
+  win_cfg.height = 720;
+  win_cfg.title = "QuakePG - PSX Dungeon Crawler";
+  win_cfg.vsync = true;
+
+  Window *window = window_create(win_cfg);
+  if (!window) {
+    return 1;
+  }
+
+  input_init(window);
+  input_set_cursor_locked(true);
+  timer_init();
+
+  // -- Renderer --
+  RendererConfig ren_cfg;
+  ren_cfg.internal_width = 320;
+  ren_cfg.internal_height = 240;
+  Renderer *renderer = renderer_create(ren_cfg);
+  renderer_set_clear_color(0.02f, 0.01f, 0.05f, 1.0f);
+
+  // -- PSX Shader --
+  Shader psx_shader =
+      shader_load("assets/shaders/psx.vert", "assets/shaders/psx.frag");
+  if (!psx_shader.program) {
+    LOG_FATAL("Failed to load PSX shaders");
+    return 1;
+  }
+
+  Texture white_tex = texture_create_white();
+
+  // -- Load dungeon --
+  DungeonMap dungeon;
+  dungeon_map_load(dungeon, DUNGEON_MAP, MAP_ROWS, 3.0f, 4.0f);
+
+  // -- Camera at player spawn --
+  Camera cam;
+  cam.position = dungeon.player_spawn;
+  cam.fov = 90.0f;
+  cam.speed = 4.0f;
+
+  // Player collision size (thin box, eye height ~1.6)
+  Vec3 player_half = {0.3f, 0.8f, 0.3f};
+
+  LOG_INFO("=== QuakePG - Dungeon Crawler ===");
+  LOG_INFO("WASD move, Mouse look, Shift sprint, ESC quit");
+
+  // ===== GAME LOOP =====
+  while (!window_should_close(window)) {
+    input_update();
+    timer_update();
+    input_poll();
+
+    f32 dt = (f32)timer_delta();
+    if (dt > 0.1f) {
+      dt = 0.1f; // cap for alt-tab
     }
 
-    // Init subsystems
-    qp::input_init(window);
-    qp::timer_init();
-
-    // Create renderer with PSX internal resolution
-    qp::RendererConfig ren_cfg;
-    ren_cfg.internal_width  = 320;
-    ren_cfg.internal_height = 240;
-
-    qp::Renderer *renderer = qp::renderer_create(ren_cfg);
-    if (!renderer) {
-        qp::window_destroy(window);
-        return 1;
+    // -- Input --
+    if (input_key_pressed(Key::Escape)) {
+      LOG_FATAL("Closing the game");
+      break;
     }
 
-    qp::renderer_set_clear_color(0.05f, 0.02f, 0.08f, 1.0f);
+    camera_process_mouse(cam, input_mouse_dx(), input_mouse_dy());
 
-    // Load basic shader
-    qp::Shader shader = qp::shader_load("assets/shaders/basic.vert", "assets/shaders/basic.frag");
-    if (!shader.program) {
-        LOG_ERROR("Failed to load shaders");
-        qp::renderer_destroy(renderer);
-        qp::window_destroy(window);
-        return 1;
+    f32 fwd = 0, right = 0;
+    if (input_key_down(Key::W)) {
+      fwd += 1.0f;
+    }
+    if (input_key_down(Key::S)) {
+      fwd -= 1.0f;
+    }
+    if (input_key_down(Key::D)) {
+      right += 1.0f;
+    }
+    if (input_key_down(Key::A)) {
+      right -= 1.0f;
     }
 
-    // Create test triangle
-    qp::Mesh triangle = qp::mesh_create_triangle();
+    cam.speed = input_key_down(Key::LeftShift) ? 8.0f : 4.0f;
 
-    LOG_INFO("Game initialized. Press ESC to quit.");
+    // Calculate desired velocity
+    Vec3 fwd_dir = camera_forward(cam);
+    Vec3 fwd_flat = vec3_normalize({fwd_dir.x, 0.0f, fwd_dir.z});
+    Vec3 right_dir = camera_right(cam);
 
-    // Game loop
-    while (!qp::window_should_close(window)) {
-        qp::input_update();
-        qp::timer_update();
-        qp::input_poll();
+    Vec3 move = fwd_flat * fwd + right_dir * right;
+    if (vec3_length_sq(move) > 0.001f) {
+      move = vec3_normalize(move);
+    }
+    Vec3 velocity = move * (cam.speed * dt);
 
-        // Handle input
-        if (qp::input_key_pressed(qp::Key::Escape)) {
-            break;
-        }
+    // -- Collision with walls (slide) --
+    AABB player_box = aabb_from_center_size(cam.position, player_half * 2.0f);
+    Vec3 new_pos =
+        aabb_slide(player_box, velocity, dungeon.wall_colliders.data(),
+                   (u32)dungeon.wall_colliders.size());
+    cam.position = new_pos;
 
-        // Render to PSX FBO
-        qp::renderer_begin_frame(renderer);
+    // -- Render --
+    i32 fb_w, fb_h;
+    window_get_framebuffer_size(window, &fb_w, &fb_h);
+    f32 aspect = (f32)ren_cfg.internal_width / (f32)ren_cfg.internal_height;
 
-        qp::shader_bind(shader);
-        qp::mesh_draw(triangle);
-        qp::shader_unbind();
+    Mat4 view = camera_view_matrix(cam);
+    Mat4 proj = camera_projection_matrix(cam, aspect);
+    Mat4 model = mat4_identity();
 
-        qp::renderer_end_frame(renderer);
+    renderer_begin_frame(renderer);
 
-        // Upscale to window
-        qp::i32 w, h;
-        qp::window_get_framebuffer_size(window, &w, &h);
-        qp::renderer_present(renderer, w, h);
+    shader_bind(psx_shader);
+    shader_set_mat4(psx_shader, "uView", view.data);
+    shader_set_mat4(psx_shader, "uProjection", proj.data);
+    shader_set_mat4(psx_shader, "uModel", model.data);
+    shader_set_float(psx_shader, "uSnapResolution", 160.0f);
+    shader_set_vec3(psx_shader, "uFogColor", 0.02f, 0.01f, 0.05f);
+    shader_set_int(psx_shader, "uDitheringEnabled", 1);
+    shader_set_int(psx_shader, "uTexture", 0);
+    shader_set_vec4(psx_shader, "uTintColor", 1, 1, 1, 1);
+    shader_set_int(psx_shader, "uUseTexture", 0);
 
-        qp::window_swap_buffers(window);
+    texture_bind(white_tex, 0);
+
+    // Draw dungeon
+    if (dungeon.floor_mesh.vao) {
+      mesh_draw(dungeon.floor_mesh);
+    }
+    if (dungeon.wall_mesh.vao) {
+      mesh_draw(dungeon.wall_mesh);
+    }
+    if (dungeon.ceiling_mesh.vao) {
+      mesh_draw(dungeon.ceiling_mesh);
     }
 
-    // Cleanup
-    qp::mesh_destroy(triangle);
-    qp::shader_destroy(shader);
-    qp::renderer_destroy(renderer);
-    qp::window_destroy(window);
+    shader_unbind();
+    renderer_end_frame(renderer);
+    renderer_present(renderer, fb_w, fb_h);
+    window_swap_buffers(window);
+  }
 
-    LOG_INFO("Game shutdown complete.");
-    return 0;
+  // -- Cleanup --
+  dungeon_map_destroy(dungeon);
+  texture_destroy(white_tex);
+  shader_destroy(psx_shader);
+  renderer_destroy(renderer);
+  window_destroy(window);
+
+  LOG_INFO("Game shutdown complete.");
+  return 0;
 }
