@@ -49,7 +49,7 @@ static void push_small_quad(std::vector<Vertex> &verts,
 
 // Subdivisions per quad axis — reduces affine texture warping on large faces.
 // PS1 games subdivided polygons for the same reason.
-static constexpr i32 QUAD_SUBDIVS = 3;
+static constexpr i32 QUAD_SUBDIVS = 5;
 
 // Push a quad subdivided into QUAD_SUBDIVS x QUAD_SUBDIVS sub-quads.
 // p0--p1 is the "u" edge, p0--p3 is the "v" edge.
