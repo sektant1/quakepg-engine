@@ -2,13 +2,13 @@
 
 ## Sobre o projeto
 
-QuakePG e uma game engine escrita do zero em C++17/OpenGL para criar um FPS dungeon crawler roguelike medieval com visual PSX retro. A arquitetura segue os principios do livro "Game Engine Architecture" de Jason Gregory.
+QuakePG e uma game engine escrita do zero em C++17/OpenGL pra criar um FPS dungeon crawler roguelike medieval com visual PSX/retro. A arquitetura segue os principios do livro "Game Engine Architecture" de Jason Gregory.
 
 O projeto e separado em duas partes:
-- **engine/** - biblioteca estatica (`libquakepg_engine.a`) com sistemas reutilizaveis
-- **game/** - executavel (`quakepg_game`) com logica especifica do jogo
+- **engine/** - static lib (`libquakepg_engine.a`) com sistemas da engine
+- **game/** - executavel (`quakepg_game`) do jogo
 
-O game nunca inclui `<glad/glad.h>` ou `<GLFW/glfw3.h>` diretamente. Toda interacao com GPU/SO passa pela API da engine.
+O client nunca inclui `<glad/glad.h>` ou `<GLFW/glfw3.h>` diretamente. Toda interacao com GPU/OS passa pela API da engine.
 
 ---
 
@@ -20,7 +20,7 @@ mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
 make -j$(nproc)
 
-# Rodar (da raiz do projeto, pra encontrar assets/)
+# Run (root do projeto, pra encontrar assets/)
 cd ..
 ./quakepg_game
 ```
@@ -82,11 +82,11 @@ quakepg/
 └─────────────────────────────────────────┘
 ```
 
-Regra de ouro: camadas de cima dependem das de baixo, nunca o contrario.
+Camadas de cima dependem das de baixo, nunca o contrario.
 
 ---
 
-## Referencia de cada subsistema
+## Referencia
 
 ### Core: types.h
 
@@ -104,7 +104,7 @@ usize                // size_t
 
 ### Core: math.h
 
-Matematica 3D. Tudo sao POD structs com funcoes livres (nao metodos).
+Matematica 3D. POD structs com funcoes livres (nao metodos).
 
 ```cpp
 #include <engine/core/math.h>
@@ -135,6 +135,8 @@ f32 v = clampf(x, 0.0f, 1.0f);
 
 ### Core: log.h / assert.h
 
+Logging / Assert handling
+
 ```cpp
 LOG_INFO("Player at %.1f %.1f %.1f", pos.x, pos.y, pos.z);
 LOG_WARN("Low health: %d", hp);
@@ -147,7 +149,7 @@ QP_ASSERT_MSG(hp > 0, "Player is dead");
 
 ### Platform: window.h
 
-Cria janela com contexto OpenGL. Wrapper de GLFW.
+Cria janela com contexto OpenGL. Wrapper do GLFW.
 
 ```cpp
 WindowConfig cfg;
@@ -168,7 +170,7 @@ window_destroy(window);
 
 ### Platform: input.h
 
-Abstrai teclado e mouse. Nunca chame `glfwGetKey` diretamente.
+Wrapper do teclado e mouse. 
 
 ```cpp
 input_init(window);
@@ -209,7 +211,7 @@ u32 fps = timer_fps();
 
 ### Renderer: shader.h
 
-Carrega e gerencia shaders GLSL.
+Da load e gerencia os shaders.
 
 ```cpp
 // Carregar de arquivo
@@ -243,7 +245,7 @@ struct Vertex {
     f32 position[3];   // location 0
     f32 texcoord[2];   // location 1
     f32 normal[3];     // location 2
-    f32 color[4];      // location 3  (RGBA, muito usado no PSX)
+    f32 color[4];      // location 3  (RGBA)
 };
 
 // Criar mesh de vertices + indices
@@ -266,11 +268,11 @@ mesh_draw(cube);
 mesh_destroy(cube);
 ```
 
-**Para criar suas proprias meshes**: monte arrays de `Vertex` e `u32` indices, chame `mesh_create()`. Veja `dungeon_map.cpp` para um exemplo completo de geracao procedural de geometria.
+**Para criar suas proprias meshes**: crie arrays de `Vertex` e `u32` indices, call `mesh_create()`. Veja `dungeon_map.cpp` para um exemplo de geracao procedural de geometria.
 
 ### Renderer: texture.h
 
-Carrega imagens como texturas OpenGL com GL_NEAREST (visual pixelado PSX).
+Carrega texturas com GL_NEAREST (pixelado PSX).
 
 ```cpp
 // Carregar de arquivo (PNG, JPG, BMP, TGA)
@@ -289,11 +291,11 @@ texture_unbind(0);
 texture_destroy(tex);
 ```
 
-Voce ja tem texturas PSX prontas em `assets/variousretrotextures/`:
-- `Brick_0.png`, `Brick_1.png` - paredes de tijolo
-- `Cobble.png`, `Cobble_Wall.png`, `Cobble_Ceiling.png` - pedra
-- `Wood_0.png`, `Wood_Dark.png` - madeira
-- `Metal_Plate.png` - metal
+ja tem algumas texturas PSX prontas em `assets/variousretrotextures/`:
+- `Brick_0.png`, `Brick_1.png` 
+- `Cobble.png`, `Cobble_Wall.png`, `Cobble_Ceiling.png`
+- `Wood_0.png`, `Wood_Dark.png`
+- `Metal_Plate.png` 
 
 ### Renderer: material.h
 
@@ -346,7 +348,7 @@ Vec3 right_dir = camera_right(cam);
 
 ### Renderer: renderer.h
 
-Gerencia o framebuffer de resolucao interna (320x240 PSX) e faz upscale para a janela.
+Gerencia o framebuffer de resolucao interna (320x240px pra emular a do PSX) e faz upscale para a janela.
 
 ```cpp
 RendererConfig cfg;
@@ -393,9 +395,9 @@ cam.position = new_pos;
 
 ---
 
-## Sistema de Dungeon Maps
+## Dungeon Maps
 
-Define dungeons como ASCII art no C++:
+Cria dungeons com ASCII art no C++:
 
 ```cpp
 #include <game/dungeon/dungeon_map.h>
@@ -413,11 +415,11 @@ i32 rows = sizeof(MEU_MAPA) / sizeof(MEU_MAPA[0]);
 
 DungeonMap dungeon;
 dungeon_map_load(dungeon, MEU_MAPA, rows, 3.0f, 4.0f);
-//                                        ^     ^
-//                             tamanho   altura
-//                             da celula das paredes
+//                                        ^      ^
+//                                  tamanho      altura
+//                                da celula      das paredes
 
-// Player spawn (posicao do 'P' no mapa)
+// Player spawn ('P' no mapa)
 cam.position = dungeon.player_spawn;
 
 // Renderizar
@@ -440,7 +442,7 @@ dungeon_map_destroy(dungeon);
 | `.`  | Chao aberto (gera chao + teto) |
 | `P`  | Spawn do player (tratado como `.`) |
 
-### Dicas pra mapas
+### Importante
 - A primeira e ultima linha/coluna devem ser `#` (paredes externas)
 - Todas as linhas devem ter o mesmo comprimento
 - So pode ter um `P`
@@ -449,25 +451,25 @@ dungeon_map_destroy(dungeon);
 
 ---
 
-## O pipeline PSX (como funciona)
+## PSX pipeline
 
 O shader `psx.vert`/`psx.frag` simula as limitacoes do PlayStation 1:
 
 ### Vertex snapping
-No PS1, coordenadas eram fixed-point (inteiros). Vertices "tremiam" ao se mover. O vertex shader faz snap das posicoes para um grid:
+No PS1, coordenadas eram fixed-point(int). Vertices "tremiam" ao se mover e o vertex shader faz snap das posicoes para um grid:
 ```glsl
 clipPos.xy = floor(clipPos.xy * uSnapResolution + 0.5) / uSnapResolution;
 ```
 `uSnapResolution = 160.0` da um jitter sutil. Valores menores = mais jitter.
 
 ### Affine texture mapping
-O PS1 nao fazia correcao de perspectiva nas texturas, causando distorcao. Usamos `noperspective` no GLSL:
+O PS1 nao fazia correcao de perspectiva nas texturas, causando distorcao, por isso usar `noperspective` no GLSL:
 ```glsl
 noperspective out vec2 vTexCoord;
 ```
 
 ### Color depth reduction
-PS1 tinha 15-bit color (5 bits/canal = 32 niveis). O fragment shader quantiza:
+PS1 tinha 15-bit colors (5 bits/canal = 32 levels). O fragment shader quantiza:
 ```glsl
 color.rgb = floor(color.rgb * 31.0 + 0.5) / 31.0;
 ```
@@ -479,7 +481,7 @@ PS1 usava dithering pra disfarcar os poucos niveis de cor. Usamos uma Bayer matr
 Renderiza num FBO de 320x240, upscale pra janela com GL_NEAREST (sem suavizacao = pixelado).
 
 ### Fog
-Fog linear por vertice, esconde o draw distance curto.
+Linear fog por vertice, esconde o draw distance curto.
 
 ### Uniforms do shader PSX
 | Uniform | Tipo | Descricao |
@@ -507,14 +509,15 @@ Fog linear por vertice, esconde o draw distance curto.
 
 ### Adicionar um novo shader
 
-1. Crie os arquivos em `assets/shaders/meushader.vert` e `.frag`
-2. No game: `Shader s = shader_load("assets/shaders/meushader.vert", "assets/shaders/meushader.frag");`
-3. Os vertex attributes sao fixos (layout 0-3: position, texcoord, normal, color)
+1. Crie os `assets/shaders/meushader.vert` e `.frag`
+2. No client: `Shader s = shader_load("assets/shaders/meushader.vert", "assets/shaders/meushader.frag");`
+3. Vertex attributes sao fixos (position, texcoord, normal, color)
 
 ### Adicionar uma textura num objeto
 
 ```cpp
 Texture brick = texture_load("assets/variousretrotextures/Brick_0.png");
+
 // No loop de render:
 shader_set_int(psx_shader, "uUseTexture", 1);
 texture_bind(brick, 0);
@@ -523,8 +526,8 @@ mesh_draw(minha_mesh);
 
 ### Adicionar um novo tipo de celula no mapa
 
-1. Abra `game/include/game/dungeon/dungeon_map.h`
-2. Abra `game/src/dungeon/dungeon_map.cpp`
+1. Veja `game/include/game/dungeon/dungeon_map.h`
+2. Veja `game/src/dungeon/dungeon_map.cpp`
 3. No `dungeon_map_load()`, adicione um case no parser. Exemplo pra `D` = porta:
 
 ```cpp
@@ -535,8 +538,7 @@ if (c == 'D') {
 }
 ```
 
-4. Na hora de checar se e parede: `dungeon_map_is_wall()` retorna false pra `D`
-5. Ajuste conforme necessario
+4. Na hora de checar se e parede: `dungeon_map_is_wall()` retorna false pro `D`
 
 ### Criar um novo subsistema na engine
 
@@ -544,22 +546,23 @@ Exemplo: sistema de audio.
 
 1. Crie o header: `engine/include/engine/audio/audio.h`
 2. Crie a implementacao: `engine/src/audio/audio.cpp`
-3. Adicione em `engine/CMakeLists.txt`:
+3. Adicione a source em `engine/CMakeLists.txt`:
 ```cmake
 set(ENGINE_SOURCES
     ...
     src/audio/audio.cpp
 )
 ```
-4. Adicione no `engine/include/engine/engine.h`:
+4. Adicione no export `engine/include/engine/engine.h`:
 ```cpp
 #include <engine/audio/audio.h>
 ```
-5. Recompile: `cd build && cmake .. && make -j$(nproc)`
+5. Compile: `cd build && cmake .. && make -j$(nproc)`
 
-### Adicionar nova logica de game
+### Adicionar logica pro jogo
 
-Toda logica especifica do jogo vai em `game/`. Exemplo: sistema de HP.
+Toda logica especifica do jogo vai em `game/`. 
+Exemplo: sistema de HP.
 
 1. Crie `game/include/game/player/health.h`:
 ```cpp
@@ -579,15 +582,15 @@ bool health_is_dead(const PlayerHealth& hp);
 3. Adicione `src/player/health.cpp` no `game/CMakeLists.txt`
 4. Use no `main.cpp`
 
-### Adicionar third party lib
+### Adicionar vendor deps
 
 1. Coloque em `vendor/` (header-only ou submodule)
-2. Se a engine precisa: adicione include path em `engine/CMakeLists.txt` (PRIVATE)
-3. Se o game precisa: adicione include path em `game/CMakeLists.txt`
+2. Se eh a engine q precisa: adicione include path em `engine/CMakeLists.txt` (PRIVATE)
+3. Se eh o game q precisa: adicione include path em `game/CMakeLists.txt`
 
 ---
 
-## Game loop - a ordem certa
+## Game loop - ordem importa
 
 ```cpp
 while (!window_should_close(window)) {
@@ -621,40 +624,39 @@ while (!window_should_close(window)) {
 
 ---
 
-## Proximos passos sugeridos
+## TODO's / Next steps
 
-Voce completou Steps 1-2 e ja tem dungeon maps. Aqui esta o que fazer em seguida:
 
-### Step 3: Carregar modelos 3D
+### Carregar modelos 3D
 - Implementar loader de OBJ (ou FBX com lib tipo assimp)
 - Voce ja tem modelos em `assets/dungeon_tiles/` e `assets/knight/`
 - Criar `engine/include/engine/resources/resource_manager.h`
 
-### Step 4: Gameplay basico
+### Gameplay basico
 - Player com HP, dano, morte
 - Inimigos que patrulham e atacam
 - Viewmodel de arma em primeira pessoa (os modelos estao em `assets/medievalweaponspack/`)
 - HUD com barra de vida
 
-### Step 5: Geracao procedural
+### Geracao procedural
 - Trocar o mapa hardcoded por geracao aleatoria
 - Algoritmo sugerido: BSP tree (dividir area em salas) + conectar com corredores
 - Ou: random walk
 
-### Step 6: Audio
+### Audio
 - Integrar miniaudio (header-only, facil)
 - Sons de passos, impacto de arma, ambiente de dungeon
 
-### Step 7: Editor
+### Editor
 - Integrar Dear ImGui
 - Visualizar/editar mapas
 - Ajustar parametros PSX em tempo real
 
 ---
 
-## Referencia rapida - arquivos importantes
+## arquivos importantes
 
-| Voce quer... | Arquivo |
+| Se tu quer.. | Arquivo |
 |---|---|
 | Mudar resolucao PSX | `game/src/main.cpp` → `RendererConfig` |
 | Mudar FOV | `game/src/main.cpp` → `cam.fov` |
@@ -674,11 +676,11 @@ Voce completou Steps 1-2 e ja tem dungeon maps. Aqui esta o que fazer em seguida
 
 ---
 
-## Convencoes do codigo
+## Convencoes
 
 - **Namespace**: todo codigo da engine esta em `namespace qp`
 - **Estilo**: C-with-structs. POD structs + funcoes livres. Sem heranca profunda.
 - **Nomes**: `snake_case` para funcoes e variaveis, `PascalCase` para structs/enums
 - **Prefixos**: funcoes do subsistema usam prefixo (`window_create`, `shader_bind`, `mesh_draw`)
-- **Memoria**: a engine usa `new/delete` simples por enquanto. Quando quiser, implemente arena allocators em `core/memory.h`
+- **Memoria**: a engine usa `new/delete` simples por enquanto. Quando precisar, implemente arena allocators em `core/memory.h`
 - **Headers**: use `<engine/...>` para headers da engine, `<game/...>` para headers do game
