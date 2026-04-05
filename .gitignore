@@ -1,0 +1,27 @@
+# Build
+build/
+cmake-build-*/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Doxygen output
+docs/api/
+docs/doxygen-awesome-css
+docs/*.pdf
+docs/*.html
+
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Binaries
+quakepg_game
+quakepg_editor
+*.o
+*.a

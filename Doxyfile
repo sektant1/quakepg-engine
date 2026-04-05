@@ -1,0 +1,91 @@
+# QuakePG Engine - Doxygen Configuration
+
+#---------------------------------------------------------------------------
+# Project
+#---------------------------------------------------------------------------
+PROJECT_NAME           = "QuakePG Engine"
+PROJECT_NUMBER         = 0.1.0
+PROJECT_BRIEF          = "Retro dungeon crawler engine"
+PROJECT_LOGO           =
+OUTPUT_DIRECTORY       = docs/api
+
+#---------------------------------------------------------------------------
+# Input
+#---------------------------------------------------------------------------
+INPUT                  = engine/include \
+                         engine/src \
+                         game/include \
+                         game/src \
+                         docs/
+FILE_PATTERNS          = *.h *.hpp *.cpp *.md
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */vendor/*
+
+#---------------------------------------------------------------------------
+# Extraction
+#---------------------------------------------------------------------------
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+
+#---------------------------------------------------------------------------
+# Source browsing
+#---------------------------------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+#---------------------------------------------------------------------------
+# Output formats
+#---------------------------------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_COLORSTYLE        = DARK
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = YES
+# HTML_EXTRA_STYLESHEET  = docs/doxygen-awesome-css/doxygen-awesome.css 
+GENERATE_LATEX         = YES
+GENERATE_MAN           = YES
+GENERATE_XML           = NO
+
+#---------------------------------------------------------------------------
+# Diagrams
+#---------------------------------------------------------------------------
+HAVE_DOT               = NO
+CLASS_DIAGRAMS         = YES
+COLLABORATION_GRAPH    = NO
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+
+#---------------------------------------------------------------------------
+# Preprocessing
+#---------------------------------------------------------------------------
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+PREDEFINED             = QP_ASSERT(x)= \
+                         QP_ASSERT_MSG(x,msg)=
+
+#---------------------------------------------------------------------------
+# Warnings
+#---------------------------------------------------------------------------
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+
+#---------------------------------------------------------------------------
+# Misc
+#---------------------------------------------------------------------------
+SORT_MEMBER_DOCS       = YES
+SORT_BRIEF_DOCS        = YES
+ALPHABETICAL_INDEX     = YES
+OPTIMIZE_OUTPUT_FOR_C  = YES
+TYPEDEF_HIDES_STRUCT   = YES
+TAB_SIZE               = 4
+MARKDOWN_SUPPORT       = YES
+AUTOLINK_SUPPORT       = YES
+USE_MDFILE_AS_MAINPAGE = docs/architecture.md
