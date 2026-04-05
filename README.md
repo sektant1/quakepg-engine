@@ -643,6 +643,173 @@ bool health_is_dead(const PlayerHealth& hp);
 2. Se eh a engine q precisa: adicione include path em `engine/CMakeLists.txt` (PRIVATE)
 3. Se eh o game q precisa: adicione include path em `game/CMakeLists.txt`
 
+### Texturizar a dungeon
+
+Hoje a dungeon renderiza so com vertex color (a textura branca 1x1 `white_tex`). Pra adicionar texturas reais nas paredes, chao e teto:
+
+1. **Carregue as texturas** no `main.cpp`, antes do game loop:
+```cpp
+Texture wall_tex  = texture_load("assets/variousretrotextures/Brick_0.png");
+Texture floor_tex = texture_load("assets/variousretrotextures/Cobble.png");
+Texture ceil_tex  = texture_load("assets/variousretrotextures/Cobble_Ceiling.png");
+```
+
+2. **Ative o uso de textura no shader** antes de desenhar:
+```cpp
+shader_set_int(psx_shader, "uUseTexture", 1);
+```
+
+3. **Bind a textura certa antes de cada mesh**:
+```cpp
+texture_bind(floor_tex, 0);
+mesh_draw(dungeon.floor_mesh);
+
+texture_bind(wall_tex, 0);
+mesh_draw(dungeon.wall_mesh);
+
+texture_bind(ceil_tex, 0);
+mesh_draw(dungeon.ceiling_mesh);
+```
+
+4. **Limpe as texturas no shutdown**:
+```cpp
+texture_destroy(wall_tex);
+texture_destroy(floor_tex);
+texture_destroy(ceil_tex);
+```
+
+5. **Ajuste os UVs se necessario**: o `push_quad()` em `dungeon_map.cpp` ja gera UVs de `(0,0)` a `(1,1)` por face. Se a textura ficar esticada (celulas grandes), voce pode escalar os UVs pra repetir a textura. Exemplo: trocar os `0, 0, 1, 1` no `push_quad` por `0, 0, cs, wh` (onde `cs` = cell_size, `wh` = wall_height). Isso faz a textura repetir proporcionalmente ao tamanho da parede. Pra funcionar, a textura precisa estar com `GL_REPEAT` (que ja e o default do OpenGL).
+
+**Texturas disponiveis** em `assets/variousretrotextures/`:
+`Brick_0.png`, `Brick_1.png`, `Cobble.png`, `Cobble_Wall.png`, `Cobble_Ceiling.png`, `Dead_Ground.png`, `Metal_Plate.png`, `Pipe.png`, `Tile.png`, `Wood_0.png`
+
+Tambem tem texturas em `assets/dungeon_tiles/textures/` (1-bit pixel art style).
+
+### Carregar e renderizar modelos 3D (armas, inimigos, props)
+
+A engine ainda nao tem um loader de modelos 3D. Voce precisa implementar um pra poder usar os assets em `assets/medievalweaponspack/` (GLB), `assets/knight/` (GLB/FBX) e `assets/dungeon_tiles/` (FBX). Existem duas abordagens:
+
+#### Opcao A: Usar Assimp (recomendado pra comecar)
+
+Assimp e uma lib que le OBJ, FBX, GLB, GLTF e dezenas de outros formatos.
+
+1. **Vendorize ou instale o Assimp**:
+   - Sistema: `sudo apt-get install libassimp-dev`
+   - Ou vendor: clone em `vendor/assimp` e adicione `add_subdirectory(vendor/assimp)` no CMake root
+
+2. **Linke no CMake** (`engine/CMakeLists.txt`):
+```cmake
+target_link_libraries(quakepg_engine PRIVATE assimp)
+```
+
+3. **Crie o loader** em `engine/include/engine/resources/model.h`:
+```cpp
+#pragma once
+#include <engine/renderer/mesh.h>
+#include <engine/renderer/texture.h>
+#include <vector>
+
+namespace qp {
+
+struct Model {
+    std::vector<Mesh> meshes;
+    std::vector<Texture> textures;
+};
+
+Model model_load(const char* path);
+void  model_draw(const Model& m, const Shader& s);
+void  model_destroy(Model& m);
+
+} // namespace qp
+```
+
+4. **Implemente** em `engine/src/resources/model.cpp`:
+   - Use `Assimp::Importer` pra abrir o arquivo
+   - Itere `aiScene->mMeshes[]`, pra cada mesh:
+     - Leia `mVertices[i]`, `mNormals[i]`, `mTextureCoords[0][i]` e converta pra `Vertex`
+     - Leia `mFaces[j].mIndices[]` pra montar os indices
+     - Chame `mesh_create(verts, count, indices, count)`
+   - Pra texturas: leia `aiMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &path)` e chame `texture_load()`
+   - GLB embute as texturas no arquivo, Assimp extrai elas automaticamente via `aiScene->mTextures[]`
+
+5. **Use no game**:
+```cpp
+Model sword = model_load("assets/medievalweaponspack/MedievalWeaponsPack/Sword.glb");
+
+// No render loop:
+Mat4 weapon_model = mat4_translate(cam.position + camera_forward(cam) * 0.5f);
+shader_set_mat4(psx_shader, "uModel", weapon_model.data);
+model_draw(sword, psx_shader);
+
+// Cleanup:
+model_destroy(sword);
+```
+
+#### Opcao B: Loader minimalista so de OBJ
+
+Se quiser evitar a dependencia do Assimp (ele e grande), pode implementar um parser de OBJ simples. OBJ e texto puro:
+
+```
+v 0.0 1.0 0.0       # vertice
+vt 0.5 1.0           # texcoord
+vn 0.0 0.0 1.0       # normal
+f 1/1/1 2/2/2 3/3/3  # face (vertex/texcoord/normal indices, base-1)
+```
+
+1. Crie `engine/src/resources/obj_loader.cpp`
+2. Parse linha por linha: `v` → push posicao, `vt` → push uv, `vn` → push normal, `f` → monte vertices indexados
+3. Converta os indices pra `Vertex[]` + `u32[]` e chame `mesh_create()`
+4. Pra usar os assets GLB/FBX, converta pra OBJ no Blender (File → Export → Wavefront OBJ)
+
+#### Renderizar arma em primeira pessoa (viewmodel)
+
+Depois de ter o loader de modelos:
+
+1. Carregue o modelo da arma (ex: `Sword.glb`)
+2. Renderize DEPOIS da dungeon, com uma matrix model especial:
+```cpp
+// Posicao relativa a camera (offset na frente + embaixo + lado)
+Vec3 weapon_offset = camera_forward(cam) * 0.4f
+                   + camera_right(cam) * 0.25f
+                   + Vec3{0, -0.3f, 0};
+Vec3 weapon_pos = cam.position + weapon_offset;
+
+Mat4 weapon_model = mat4_translate(weapon_pos)
+                  * mat4_rotate_y(to_radians(-cam.yaw - 90.0f))
+                  * mat4_scale({0.5f, 0.5f, 0.5f}); // ajuste o scale
+
+shader_set_mat4(psx_shader, "uModel", weapon_model.data);
+shader_set_int(psx_shader, "uUseTexture", 1);
+model_draw(sword, psx_shader);
+```
+3. **Dica**: pra evitar que a arma "entre" nas paredes, voce pode renderizar o viewmodel com depth buffer limpo (`glClear(GL_DEPTH_BUFFER_BIT)`) antes de desenhar a arma. Assim ela sempre fica na frente.
+
+#### Renderizar inimigos/props no mundo
+
+1. Carregue o modelo (ex: `knight.glb`)
+2. Guarde a posicao de cada inimigo (ex: em um array ou futuro ECS)
+3. No render loop, pra cada inimigo:
+```cpp
+Mat4 enemy_model = mat4_translate(enemy.position)
+                 * mat4_rotate_y(to_radians(enemy.facing_angle))
+                 * mat4_scale({1.0f, 1.0f, 1.0f});
+shader_set_mat4(psx_shader, "uModel", enemy_model.data);
+model_draw(knight, psx_shader);
+```
+4. Pra colisao, crie um AABB pro inimigo e use `aabb_intersects()` pra detectar hit
+
+#### Assets disponiveis no projeto
+
+| Pasta | Conteudo | Formato |
+|-------|----------|---------|
+| `assets/medievalweaponspack/MedievalWeaponsPack/` | Sword, Mace, Shield, Spear | GLB |
+| `assets/knight/` | Modelo de cavaleiro com textura lowres | GLB, FBX |
+| `assets/dungeon_tiles/` | Tiles de dungeon (paredes, chao, containers, etc.) | FBX |
+| `assets/3D Retro Medieval Fantasy Kit/` | Kit medieval estilo retro | Variado |
+| `assets/bigfoot/` | Modelo de bigfoot | Variado |
+| `assets/Biblically Accurate Angel (Seraphim)/` | Anjo seraphim | Variado |
+| `assets/PS1 Biblically Accurate Angel/` | Anjo estilo PS1 | Variado |
+
 ---
 
 ## Game loop - ordem importa
