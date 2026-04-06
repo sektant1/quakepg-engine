@@ -1,7 +1,9 @@
+#include <cmath>
 #include <engine/engine.h>
 #include <game/dungeon/dungeon_map.h>
 #include <game/weapon.h>
 
+#include "engine/platform/input.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -35,21 +37,39 @@ static const char* DUNGEON_MAP[] = {
     "#..##......##..#",
     "#..............#",
     "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#..............#",
+    "#......##......#",
+    "#..............#",
+    "#..............#",
     "################",
 };
 // clang-format on
 
 static constexpr i32 MAP_ROWS = sizeof(DUNGEON_MAP) / sizeof(DUNGEON_MAP[0]);
 
+static const f32 MIN_Y = 2.0f;
+
 int main()
 {
     // -- Window --
     WindowConfig win_cfg;
-    win_cfg.width     = 960;
+    win_cfg.width     = 1280;
     win_cfg.height    = 720;
-    win_cfg.title     = "QuakePG Dungeon Crawler";
-    win_cfg.vsync     = true;
-    win_cfg.maximized = true;
+    win_cfg.title     = "quakepg debugger";
+    win_cfg.vsync     = false;
+    win_cfg.maximized = false;
 
     Window *window = window_create(win_cfg);
     if (!window) {
@@ -109,6 +129,9 @@ int main()
 
     // Player collision size (thin box, eye height ~1.6)
     Vec3 player_half = {0.3f, 0.8f, 0.3f};
+    f32  vel_y       = 0.0f;
+    f32  gravity     = 15.0f;
+    bool on_ground   = true;
 
     // -- Debug UI state (shared with debug window) --
     DebugUIState dbg      = {};
@@ -118,6 +141,8 @@ int main()
     dbg.resolution_preset = 2;
     dbg.camera            = &cam;
     dbg.base_speed        = 4.0f;
+    dbg.gravity           = 15.0f;
+    dbg.jump_speed        = 5.0f;
     dbg.sprint_mult       = 2.0f;
     dbg.snap_resolution   = 0;
     dbg.fog_color[0]      = 0.02f;
@@ -186,6 +211,9 @@ int main()
         if (input_key_down(Key::A)) {
             right -= 1.0f;
         }
+        if (input_key_pressed(Key::Space) && on_ground) {
+            vel_y = dbg.jump_speed;
+        }
 
         // Attack with left mouse button
         if (cursor_locked && input_mouse_pressed(MouseButton::Left)) {
@@ -198,17 +226,35 @@ int main()
         Vec3 fwd_flat  = vec3_normalize({fwd_dir.x, 0.0f, fwd_dir.z});
         Vec3 right_dir = camera_right(cam);
 
+        vel_y -= dbg.gravity * dt;
+
         Vec3 move = fwd_flat * fwd + right_dir * right;
         if (vec3_length_sq(move) > 0.001f) {
             move = vec3_normalize(move);
         }
+
         Vec3 velocity = move * (cam.speed * dt);
+        velocity.y    = vel_y * dt;
+        on_ground     = false;
 
         AABB player_box = aabb_from_center_size(cam.position, player_half * 2.0f);
+
+        Vec3 old_pos = cam.position;
+
         Vec3 new_pos =
             aabb_slide(player_box, velocity, dungeon.wall_colliders.data(), (u32)dungeon.wall_colliders.size());
         cam.position = new_pos;
 
+        if (fabsf((new_pos.y) - (old_pos.y + velocity.y)) > 0.001f) {
+            vel_y = 0.0f;
+        }
+        if (cam.position.y <= 2.0f) {
+            cam.position.y = 2.0f;
+            vel_y          = 0.0f;
+            on_ground      = true;
+        }
+
+        LOG_INFO("vel_y: %.2f | new_pos.y: %.2f | expected: %.2f", vel_y, new_pos.y, old_pos.y + velocity.y);
         // -- Update weapon --
         f32 move_speed = vec3_length(velocity);
         weapon_update(sword, dt, move_speed);

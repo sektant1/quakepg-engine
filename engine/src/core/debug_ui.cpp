@@ -60,7 +60,8 @@ void debug_ui_draw(DebugUIState &s, bool *open)
     ImGui::SliderFloat("Speed", &s.base_speed, 1.0f, 20.0f);
     ImGui::SliderFloat("Sprint Multiplier", &s.sprint_mult, 1.0f, 5.0f);
     ImGui::SliderFloat("Sensitivity", &s.camera->sensitivity, 0.05f, 0.5f);
-
+    ImGui::SliderFloat("Jump Multiplier", &s.jump_speed, 1.0f, 10.0f);
+    ImGui::SliderFloat("Gravity", &s.gravity, 0.00f, 25.0f);
     // -- Vertex Snapping --
     ImGui::SeparatorText("Vertex Snapping");
     ImGui::SliderFloat("Snap Resolution", &s.snap_resolution, 0.0f, 320.0f, "%.0f");
